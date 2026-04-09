@@ -23,7 +23,7 @@ We chose to reframe the classification task as a **text generation task** using 
  
 ### Base Model
  
-We used **Qwen/Qwen3-1.7B**, a 1.7 billion parameter multilingual causal language model from Alibaba's Qwen3 family. It was selected because it fits within the 32GB VRAM constraint when loaded in fp16 precision, offers strong French language understanding, and is included in the list of authorized models. The model is loaded with `dtype=torch.float16` and `device_map=None` to allow Distributed Data Parallel (DDP) training via `accelerate`.
+We used **Qwen/Qwen3-1.7B**, a 1.7 billion parameter multilingual causal language model from Alibaba's Qwen3 family. It was selected because it fits within the 32GB VRAM constraint when loaded in fp16 precision, offers strong French language understanding. The model is loaded with `dtype=torch.float16` and `device_map=None` to allow Distributed Data Parallel (DDP) training via `accelerate`.
  
 ### Prompt Design
  
@@ -35,15 +35,15 @@ Food: <label>
 Service: <label>
 ```
  
-The prompt and completion are concatenated and fed to the SFT trainer. The loss is computed only on the completion tokens, which is the standard approach for instruction fine-tuning.
+The prompt and completion are concatenated and fed to the SFT trainer. The loss is computed only on the completion tokens.
  
 ### LoRA Configuration
  
-Full parameter fine-tuning of 1.7B parameters would be expensive and prone to overfitting on a dataset of this size. We therefore applied LoRA, which freezes the base model weights and introduces low-rank trainable matrices into the attention layers. Our configuration uses rank `r=16`, `lora_alpha=32`, `lora_dropout=0.05`, and targets the `q_proj` and `v_proj` attention projection matrices. This results in only **3,211,264 trainable parameters out of 1,723,786,240 total (0.19%)**, making training fast and memory-efficient.
+Full parameter fine-tuning of 1.7B parameters would be expensive and prone to overfitting on a dataset of this size. We therefore applied LoRA, which freezes the base model weights and introduces low-rank trainable matrices into the attention layers. Our configuration uses rank `r=16`, `lora_alpha=32`, `lora_dropout=0.05`, and targets the `q_proj` and `v_proj` attention projection matrices. This results in only **3,211,264 trainable parameters out of 1,723,786,240 total (0.19%)**.
  
 ### Training Setup
  
-Training was performed using HuggingFace TRL's `SFTTrainer` for 3 epochs with fp16 mixed precision. The effective batch size is set to 16 and scales automatically with the number of available GPUs via gradient accumulation. The learning rate is set to `2e-4` and scales linearly with the effective batch size. The best checkpoint (by evaluation loss) is selected at the end of training. Only the LoRA adapter weights are saved, not the full model.
+Training was performed using HuggingFace TRL's `SFTTrainer` for 3 epochs with fp16 mixed precision. The effective batch size is set to 16 and scales automatically with the number of available GPUs via gradient accumulation. The learning rate is set to `2e-4` and scales linearly with the effective batch size.
  
 ### Inference
  
@@ -53,14 +53,15 @@ At prediction time, the base model is reloaded and the LoRA adapter is applied v
  
 ## Results on the Development Set
  
-The program was evaluated over 2 runs on the full development set. Results are as follows:
+The program was evaluated over 3 runs on the full development set. Results are as follows:
  
 | Run | Price | Food | Service | Macro Avg Accuracy |
 |-----|-------|------|---------|-------------------|
 | 1   | 87.67% | 85.17% | 87.00% | **86.61%** |
 | 2   | 87.67% | 85.00% | 87.50% | **86.72%** |
+| 3   | 87.5% | 85.15% | 87.50% | **86.72%** |
  
-**Average Macro-Average Accuracy across runs: 86.67%**
+**Average Macro-Average Accuracy across runs: 86.68%**
  
 ---
  
