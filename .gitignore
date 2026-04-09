@@ -1,3 +1,6 @@
 /.pip_tmp
 /.venv_absa
 src/__pycache__
+src/lora_adapter
+src/lora_checkpoints
+Miniconda3-latest-Linux-x86_64.sh

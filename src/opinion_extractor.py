@@ -67,10 +67,12 @@ class OpinionExtractor:
         raise TypeError("Input data must be a pandas DataFrame, list of dicts, or list of strings.")
 
     def _normalize_label(self, raw_label: str) -> str:
-        if raw_label is None:
+        if not raw_label or not raw_label.strip():
             return "No Opinion"
-        cleaned = raw_label.strip().splitlines()[0].strip()
-        cleaned = cleaned.strip(" .,:;!?")
+        lines = raw_label.strip().splitlines()
+        if not lines:
+            return "No Opinion"
+        cleaned = lines[0].strip().strip(" .,:;!?")
         mapping = {
             "positive": "Positive",
             "negative": "Negative",
@@ -169,7 +171,7 @@ class OpinionExtractor:
             gradient_accumulation_steps=gradient_accumulation_steps,
             learning_rate=learning_rate,
             fp16=True,
-            evaluation_strategy="epoch",
+            eval_strategy="epoch",
             save_strategy="epoch",
             load_best_model_at_end=True,
             logging_steps=10,
@@ -181,9 +183,7 @@ class OpinionExtractor:
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=dev_dataset,
-            tokenizer=self.tokenizer,
-            dataset_text_field="text",
-            max_seq_length=512,
+            processing_class=self.tokenizer,
         )
         trainer.train()
 
